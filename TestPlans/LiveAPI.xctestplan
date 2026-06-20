@@ -1,0 +1,28 @@
+{
+  "configurations" : [
+    {
+      "id" : "0AC37439-232C-470C-AC19-B132EB73CC4E",
+      "name" : "Live API",
+      "options" : {
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : false,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:Ember.xcodeproj",
+      "identifier" : "3E853DD93E303CC86CD1FA7F",
+      "name" : "Ember"
+    }
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:Ember.xcodeproj",
+        "identifier" : "AD322C5B518528509E73D255",
+        "name" : "EmberLiveAPITests"
+      }
+    }
+  ],
+  "version" : 1
+}
