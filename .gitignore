@@ -1,0 +1,19 @@
+# Generated Xcode project (regenerate with `xcodegen generate`)
+Ember.xcodeproj/
+
+# Xcode build artifacts
+build/
+DerivedData/
+.swiftpm/
+*.xcworkspace
+xcuserdata/
+*.xcuserstate
+
+# macOS
+.DS_Store
+
+# Misc
+*.log
+*.ipa
+*.dSYM.zip
+*.dSYM
