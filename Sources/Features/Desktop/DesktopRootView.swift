@@ -5,6 +5,8 @@ import SwiftUI
 /// detail view, and view models as the iPhone layout.
 struct DesktopRootView: View {
     @Environment(SettingsStore.self) private var settings
+    @Environment(ReadStore.self) private var readStore
+    @Environment(BookmarkStore.self) private var bookmarks
 
     // Optional so the single-selection `List(selection:)` resolves to the
     // iOS/Catalyst-available initializer.
@@ -33,6 +35,9 @@ struct DesktopRootView: View {
         .sheet(isPresented: $showSettings) {
             SettingsView()
                 .frame(minWidth: 440, minHeight: 620)
+                .environment(settings)
+                .environment(readStore)
+                .environment(bookmarks)
         }
         .onAppear {
             guard !didInit else { return }

@@ -43,6 +43,9 @@ struct RootView: View {
         }
         .fullScreenCover(isPresented: onboardingBinding) {
             OnboardingView()
+                // Presentation containers do not reliably inherit Observation
+                // environment values on Mac Catalyst (notably on macOS 27).
+                .environment(settings)
         }
     }
 
