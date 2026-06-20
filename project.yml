@@ -40,3 +40,47 @@ targets:
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: "NO"
         DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER: "YES"
         MACOSX_DEPLOYMENT_TARGET: "15.0"
+
+  EmberTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: Tests/EmberTests
+    dependencies:
+      - target: Ember
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.datanoise.ember.tests
+        SUPPORTS_MACCATALYST: "YES"
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: "NO"
+        DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER: "YES"
+        MACOSX_DEPLOYMENT_TARGET: "15.0"
+
+  EmberLiveAPITests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: Tests/EmberLiveAPITests
+    dependencies:
+      - target: Ember
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.datanoise.ember.live-api-tests
+        SUPPORTS_MACCATALYST: "YES"
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: "NO"
+        DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER: "YES"
+        MACOSX_DEPLOYMENT_TARGET: "15.0"
+
+schemes:
+  Ember:
+    build:
+      targets:
+        Ember: all
+    test:
+      config: Debug
+      testPlans:
+        - path: TestPlans/Core.xctestplan
+          defaultPlan: true
+        - path: TestPlans/LiveAPI.xctestplan

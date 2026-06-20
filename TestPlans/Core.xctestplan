@@ -1,0 +1,34 @@
+{
+  "configurations" : [
+    {
+      "id" : "B483B9A6-2695-4971-891E-2561DF97D348",
+      "name" : "Core",
+      "options" : {
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : false,
+    "commandLineArgumentEntries" : [
+      {
+        "argument" : "-uiForceOffline",
+        "enabled" : true
+      }
+    ],
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:Ember.xcodeproj",
+      "identifier" : "3E853DD93E303CC86CD1FA7F",
+      "name" : "Ember"
+    }
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:Ember.xcodeproj",
+        "identifier" : "9CB026868D8E745BE7705048",
+        "name" : "EmberTests"
+      }
+    }
+  ],
+  "version" : 1
+}
