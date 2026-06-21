@@ -79,6 +79,9 @@ struct SettingsView: View {
             Toggle(isOn: settings.markReadOnOpen) {
                 Label("Mark Stories Read on Open", systemImage: "checkmark.circle")
             }
+            Toggle(isOn: settings.showThumbnails) {
+                Label("Show Story Thumbnails", systemImage: "square.fill.text.grid.1x2")
+            }
         }
     }
 
@@ -111,12 +114,12 @@ struct SettingsView: View {
         Section {
             Button {
                 Haptics.tap()
-                withAnimation { settings.hasCompletedOnboarding = false }
+                withAnimation { settings.resetToDefaults() }
             } label: {
                 Label("Personalize Again", systemImage: "wand.and.stars")
             }
         } footer: {
-            Text("Re-run the quick setup to retune the app to your preferences.")
+            Text("Resets all preferences to their defaults and re-runs the quick setup.")
         }
     }
 

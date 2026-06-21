@@ -40,7 +40,9 @@ struct StoryRow: View {
                     .padding(.top, 2)
             }
 
-            thumbnail
+            if settings.showThumbnails {
+                thumbnail
+            }
 
             VStack(alignment: .leading, spacing: 5) {
                 Text(item.displayTitle)

@@ -29,8 +29,8 @@ struct OnboardingView: View {
                 welcomeStep.tag(0)
                 appearanceStep($settings).tag(1)
                 accentStep($settings).tag(2)
-                feedStep($settings).tag(3)
-                accessibilityStep($settings).tag(4)
+                accessibilityStep($settings).tag(3)
+                feedStep($settings).tag(4)
                 doneStep.tag(5)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
@@ -186,7 +186,7 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: Step 3 — Home feed
+    // MARK: Step 4 — Home feed
 
     private func feedStep(_ settings: Bindable<SettingsStore>) -> some View {
         StepScaffold {
@@ -209,7 +209,7 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: Step 4 — Accessibility (smart)
+    // MARK: Step 3 — Accessibility (smart)
 
     private func accessibilityStep(_ settings: Bindable<SettingsStore>) -> some View {
         StepScaffold {
@@ -250,6 +250,8 @@ struct OnboardingView: View {
                     ToggleRow(title: "Underline links", subtitle: "Keep links identifiable without color", systemImage: "underline", isOn: settings.underlineLinks)
                     Divider().padding(.leading, 40)
                     ToggleRow(title: "Rank numbers", subtitle: "Show numeric position in feeds", systemImage: "number", isOn: settings.showRankNumbers)
+                    Divider().padding(.leading, 40)
+                    ToggleRow(title: "Story thumbnails", subtitle: "Show the site favicon next to each story", systemImage: "square.fill.text.grid.1x2", isOn: settings.showThumbnails)
                 }
                 .background(Theme.surface)
                 .clipShape(RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
@@ -259,6 +261,7 @@ struct OnboardingView: View {
                         .font(.footnote)
                         .foregroundStyle(Theme.textSecondary)
                 }
+                previewCard
                 Spacer()
             }
         }
@@ -319,7 +322,7 @@ struct OnboardingView: View {
                 .font(.system(size: 10, weight: .heavy))
                 .tracking(1)
                 .foregroundStyle(Theme.textTertiary)
-            OnboardingPreviewRow(accent: settings.accent.color)
+            OnboardingPreviewRow(accent: settings.accent.color, showThumbnail: settings.showThumbnails, showRank: settings.showRankNumbers, underlineLinks: settings.underlineLinks)
                 .padding(Spacing.m)
                 .background(Theme.surface)
                 .clipShape(RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
@@ -541,13 +544,26 @@ private struct ToggleRow: View {
 /// Mock story row used in the onboarding live preview.
 private struct OnboardingPreviewRow: View {
     let accent: Color
+    var showThumbnail: Bool = true
+    var showRank: Bool = true
+    var underlineLinks: Bool = true
 
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.m) {
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .fill(accent.opacity(0.16))
-                .frame(width: 38, height: 38)
-                .overlay(Image(systemName: "flame.fill").foregroundStyle(accent))
+            if showRank {
+                Text("42")
+                    .font(.system(.footnote, design: .rounded).weight(.bold))
+                    .monospacedDigit()
+                    .foregroundStyle(Theme.textTertiary)
+                    .frame(width: 22, alignment: .trailing)
+                    .padding(.top, 2)
+            }
+            if showThumbnail {
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(accent.opacity(0.16))
+                    .frame(width: 38, height: 38)
+                    .overlay(Image(systemName: "flame.fill").foregroundStyle(accent))
+            }
             VStack(alignment: .leading, spacing: 5) {
                 Text("How to Do Great Work")
                     .font(AppFont.storyTitle)
@@ -562,6 +578,11 @@ private struct OnboardingPreviewRow: View {
                         .font(AppFont.meta)
                         .foregroundStyle(Theme.textSecondary)
                 }
+                Text("paulgraham.com/greatwork.html")
+                    .font(AppFont.meta)
+                    .foregroundStyle(accent)
+                    .underline(underlineLinks)
+                    .lineLimit(1)
             }
             Spacer(minLength: 0)
         }

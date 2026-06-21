@@ -47,6 +47,10 @@ final class SettingsStore {
     var markReadOnOpen: Bool {
         didSet { store(markReadOnOpen, .markReadOnOpen) }
     }
+    /// Show the favicon/image thumbnail on each story row.
+    var showThumbnails: Bool {
+        didSet { store(showThumbnails, .showThumbnails) }
+    }
     var hapticsEnabled: Bool {
         didSet {
             store(hapticsEnabled, .haptics)
@@ -94,6 +98,7 @@ final class SettingsStore {
         openLinksInApp = defaults.object(forKey: Key.openLinksInApp.rawValue) as? Bool ?? true
         readerMode = defaults.object(forKey: Key.readerMode.rawValue) as? Bool ?? false
         markReadOnOpen = defaults.object(forKey: Key.markReadOnOpen.rawValue) as? Bool ?? true
+        showThumbnails = defaults.object(forKey: Key.showThumbnails.rawValue) as? Bool ?? true
         hapticsEnabled = defaults.object(forKey: Key.haptics.rawValue) as? Bool ?? true
         underlineLinks = defaults.object(forKey: Key.underlineLinks.rawValue) as? Bool ?? true
         distinguishWithoutColor = defaults.object(forKey: Key.distinguishWithoutColor.rawValue) as? Bool ?? false
@@ -104,6 +109,24 @@ final class SettingsStore {
         Haptics.isEnabled = hapticsEnabled
     }
 
+    /// Restore every preference to its first-launch default. Used before
+    /// re-running onboarding so personalization starts from a clean slate.
+    func resetToDefaults() {
+        appearance = .system
+        accent = .ember
+        defaultFeed = .top
+        openLinksInApp = true
+        readerMode = false
+        markReadOnOpen = true
+        hapticsEnabled = true
+        underlineLinks = true
+        distinguishWithoutColor = false
+        showRankNumbers = true
+        showThumbnails = true
+        readingTextScale = 1.0
+        hasCompletedOnboarding = false
+    }
+
     private enum Key: String {
         case appearance = "settings.appearance"
         case accent = "settings.accent"
@@ -111,6 +134,7 @@ final class SettingsStore {
         case openLinksInApp = "settings.openLinksInApp"
         case readerMode = "settings.readerMode"
         case markReadOnOpen = "settings.markReadOnOpen"
+        case showThumbnails = "settings.showThumbnails"
         case haptics = "settings.haptics"
         case underlineLinks = "settings.underlineLinks"
         case distinguishWithoutColor = "settings.distinguishWithoutColor"
