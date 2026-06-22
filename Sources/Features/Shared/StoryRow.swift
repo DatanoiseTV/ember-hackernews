@@ -10,13 +10,27 @@ struct StoryRow: View {
     @Environment(SettingsStore.self) private var settings
     @Environment(BookmarkStore.self) private var bookmarks
     @Environment(ReadStore.self) private var readStore
+    @Environment(AccountStore.self) private var account
+    @Environment(FavoritesStore.self) private var favorites
     @Environment(\.openArticle) private var openArticle
     @Environment(\.accessibilityDifferentiateWithoutColor) private var systemDiffNoColor
     @Environment(\.dynamicTypeSize) private var typeSize
 
     private var isRead: Bool { readStore.isRead(item.id) }
-    private var isSaved: Bool { bookmarks.isBookmarked(item.id) }
+    /// When signed in, the save action manages HN favorites; otherwise local bookmarks.
+    private var usesFavorites: Bool { settings.accountFeaturesEnabled && account.isSignedIn }
+    private var isSaved: Bool {
+        usesFavorites ? favorites.isFavorite(item.id) : bookmarks.isBookmarked(item.id)
+    }
     private var diffNoColor: Bool { systemDiffNoColor || settings.distinguishWithoutColor }
+
+    private func toggleSaved() {
+        if usesFavorites {
+            Task { await favorites.toggle(item.id, writer: HNWebWriter(dataStore: account.dataStore)) }
+        } else {
+            bookmarks.toggle(item)
+        }
+    }
 
     private var categoryTag: (String, Color)? {
         switch item.kind {
@@ -64,7 +78,7 @@ struct StoryRow: View {
             Spacer(minLength: 0)
 
             if isSaved {
-                Image(systemName: "bookmark.fill")
+                Image(systemName: usesFavorites ? "star.fill" : "bookmark.fill")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(Theme.upvote)
                     .padding(.top, 2)
@@ -137,13 +151,18 @@ struct StoryRow: View {
         if let url = item.articleURL {
             Button("Open Link") { openArticle(url) }
         }
-        Button(isSaved ? "Remove from Saved" : "Save") {
-            bookmarks.toggle(item)
+        Button(saveActionTitle) {
+            toggleSaved()
             Haptics.soft()
         }
         if let url = item.articleURL ?? Optional(item.hnURL) {
             ShareLink(item: url) { Text("Share") }
         }
+    }
+
+    private var saveActionTitle: String {
+        if usesFavorites { return isSaved ? "Remove from Favorites" : "Add to Favorites" }
+        return isSaved ? "Remove from Saved" : "Save"
     }
 
     @ViewBuilder private var contextMenu: some View {
@@ -155,12 +174,13 @@ struct StoryRow: View {
             }
         }
         Button {
-            let nowSaved = bookmarks.toggle(item)
+            toggleSaved()
             Haptics.soft()
-            _ = nowSaved
         } label: {
-            Label(isSaved ? "Remove from Saved" : "Save",
-                  systemImage: isSaved ? "bookmark.slash" : "bookmark")
+            Label(saveActionTitle,
+                  systemImage: usesFavorites
+                    ? (isSaved ? "star.slash" : "star")
+                    : (isSaved ? "bookmark.slash" : "bookmark"))
         }
         ShareLink(item: item.articleURL ?? item.hnURL) {
             Label("Share", systemImage: "square.and.arrow.up")

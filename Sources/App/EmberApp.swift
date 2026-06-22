@@ -9,6 +9,7 @@ struct EmberApp: App {
     @State private var account = AccountStore()
     @State private var voteStore = VoteStore()
     @State private var pendingComments = PendingCommentStore()
+    @State private var favorites = FavoritesStore()
 
     var body: some Scene {
         WindowGroup {
@@ -20,8 +21,12 @@ struct EmberApp: App {
                 .environment(account)
                 .environment(voteStore)
                 .environment(pendingComments)
+                .environment(favorites)
                 .task {
                     await account.restore()
+                    if let username = account.username {
+                        await favorites.refresh(username: username)
+                    }
                 }
         }
     }

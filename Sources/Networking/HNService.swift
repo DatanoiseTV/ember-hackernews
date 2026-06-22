@@ -27,6 +27,7 @@ protocol HNServicing {
     func user(_ id: String) async throws -> HNUser
     func commentTree(for id: Int) async throws -> AlgoliaItem
     func search(_ query: String, mode: SearchMode, page: Int) async throws -> [SearchHit]
+    func favoriteIDs(username: String) async throws -> [Int]
 }
 
 /// Live implementation. Feeds and items come from the official Firebase API;
@@ -151,5 +152,29 @@ final class LiveHNService: HNServicing {
         guard let url = components.url else { throw HNError.invalidURL }
         let response: SearchResponse = try await get(url.absoluteString, decoder: algoliaDecoder)
         return response.hits
+    }
+
+    /// HN favorites live only on the website (no API). Fetch the public favorites
+    /// page and extract the favorited story ids from its `item?id=` links — a
+    /// minimal, stable parse; the items themselves are then loaded via the API.
+    func favoriteIDs(username: String) async throws -> [Int] {
+        guard let url = URL(string: "https://news.ycombinator.com/favorites?id=\(username)") else {
+            throw HNError.invalidURL
+        }
+        let (data, response) = try await session.data(from: url)
+        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            throw HNError.badStatus(http.statusCode)
+        }
+        let html = String(decoding: data, as: UTF8.self)
+        let regex = try NSRegularExpression(pattern: "item\\?id=(\\d+)")
+        let ns = html as NSString
+        var ids: [Int] = []
+        var seen = Set<Int>()
+        for match in regex.matches(in: html, range: NSRange(location: 0, length: ns.length)) {
+            if let id = Int(ns.substring(with: match.range(at: 1))), seen.insert(id).inserted {
+                ids.append(id)
+            }
+        }
+        return ids
     }
 }

@@ -12,6 +12,7 @@ struct StoryDetailView: View {
     @Environment(AccountStore.self) private var account
     @Environment(VoteStore.self) private var voteStore
     @Environment(PendingCommentStore.self) private var pendingComments
+    @Environment(FavoritesStore.self) private var favorites
     @Environment(\.openArticle) private var openArticle
     @Environment(\.openURL) private var openURL
 
@@ -35,6 +36,19 @@ struct StoryDetailView: View {
         (canInteract && settings.myCommentsFirst) ? account.username : nil
     }
     private var writer: HNWebWriter { HNWebWriter(dataStore: account.dataStore) }
+
+    /// When signed in, the save action manages HN favorites; otherwise local bookmarks.
+    private var usesFavorites: Bool { settings.accountFeaturesEnabled && account.isSignedIn }
+    private var isSaved: Bool {
+        usesFavorites ? favorites.isFavorite(story.id) : bookmarks.isBookmarked(story)
+    }
+    private func toggleSaved() {
+        if usesFavorites {
+            Task { await favorites.toggle(story.id, writer: writer) }
+        } else {
+            _ = bookmarks.toggle(story)
+        }
+    }
 
     var body: some View {
         ScrollView {
@@ -417,13 +431,14 @@ struct StoryDetailView: View {
         }
         ToolbarItem(placement: .topBarTrailing) {
             Button {
-                let saved = bookmarks.toggle(story)
+                toggleSaved()
                 Haptics.soft()
-                _ = saved
             } label: {
-                Image(systemName: bookmarks.isBookmarked(story) ? "bookmark.fill" : "bookmark")
+                Image(systemName: isSaved
+                    ? (usesFavorites ? "star.fill" : "bookmark.fill")
+                    : (usesFavorites ? "star" : "bookmark"))
             }
-            .accessibilityLabel(bookmarks.isBookmarked(story) ? "Remove from saved" : "Save story")
+            .accessibilityLabel(isSaved ? "Remove" : (usesFavorites ? "Add to favorites" : "Save story"))
         }
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
