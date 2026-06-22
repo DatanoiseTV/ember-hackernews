@@ -35,6 +35,13 @@ final class SearchViewModel {
             results = items
             phase = items.isEmpty ? .empty : .results
         } catch {
+            // A newer keystroke supersedes this request: typing cancels the
+            // in-flight search (URLSession throws), and a stale query should
+            // never flash an error for text the user has already moved past.
+            guard !error.isCancellation,
+                  trimmed == query.trimmingCharacters(in: .whitespacesAndNewlines) else {
+                return
+            }
             results = []
             phase = .failed((error as? HNError)?.errorDescription ?? error.localizedDescription)
         }
@@ -44,5 +51,19 @@ final class SearchViewModel {
         guard newMode != mode else { return }
         mode = newMode
         await runSearch()
+    }
+}
+
+private extension Error {
+    /// True when a request was cancelled (e.g. superseded by a newer search),
+    /// including the `URLError.cancelled` wrapped inside `HNError.transport`.
+    var isCancellation: Bool {
+        if self is CancellationError { return true }
+        if let urlError = self as? URLError, urlError.code == .cancelled { return true }
+        if let hnError = self as? HNError, case .transport(let underlying) = hnError,
+           (underlying as? URLError)?.code == .cancelled {
+            return true
+        }
+        return false
     }
 }
