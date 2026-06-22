@@ -61,6 +61,11 @@ final class SettingsStore {
     var showThumbnails: Bool {
         didSet { store(showThumbnails, .showThumbnails) }
     }
+    /// Opt-in: enable signing in to a Hacker News account for voting, commenting
+    /// and submitting. Default off; the app stays read-only and API-only when off.
+    var accountFeaturesEnabled: Bool {
+        didSet { store(accountFeaturesEnabled, .accountFeaturesEnabled) }
+    }
     var hapticsEnabled: Bool {
         didSet {
             store(hapticsEnabled, .haptics)
@@ -109,6 +114,7 @@ final class SettingsStore {
         readerMode = defaults.object(forKey: Key.readerMode.rawValue) as? Bool ?? false
         markReadOnOpen = defaults.object(forKey: Key.markReadOnOpen.rawValue) as? Bool ?? true
         showThumbnails = defaults.object(forKey: Key.showThumbnails.rawValue) as? Bool ?? true
+        accountFeaturesEnabled = defaults.object(forKey: Key.accountFeaturesEnabled.rawValue) as? Bool ?? false
         hapticsEnabled = defaults.object(forKey: Key.haptics.rawValue) as? Bool ?? true
         underlineLinks = defaults.object(forKey: Key.underlineLinks.rawValue) as? Bool ?? true
         distinguishWithoutColor = defaults.object(forKey: Key.distinguishWithoutColor.rawValue) as? Bool ?? false
@@ -145,6 +151,7 @@ final class SettingsStore {
         case readerMode = "settings.readerMode"
         case markReadOnOpen = "settings.markReadOnOpen"
         case showThumbnails = "settings.showThumbnails"
+        case accountFeaturesEnabled = "settings.accountFeaturesEnabled"
         case haptics = "settings.haptics"
         case underlineLinks = "settings.underlineLinks"
         case distinguishWithoutColor = "settings.distinguishWithoutColor"

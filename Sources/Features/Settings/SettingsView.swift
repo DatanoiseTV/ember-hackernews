@@ -4,9 +4,12 @@ struct SettingsView: View {
     @Environment(SettingsStore.self) private var settings
     @Environment(ReadStore.self) private var readStore
     @Environment(BookmarkStore.self) private var bookmarks
+    @Environment(AccountStore.self) private var account
     @Environment(\.openURL) private var openURL
 
     @State private var confirmClearRead = false
+    @State private var confirmSignOut = false
+    @State private var webTask: HNWebTask?
     @State private var cacheSize = 0
 
     var body: some View {
@@ -16,6 +19,7 @@ struct SettingsView: View {
             Form {
                 appearanceSection($settings)
                 readingSection($settings)
+                accountSection($settings)
                 accessibilitySection($settings)
                 personalizeSection
                 dataSection
@@ -26,6 +30,51 @@ struct SettingsView: View {
             .labelStyle(SettingsLabelStyle())
             .environment(\.defaultMinListRowHeight, 46)
             .task { cacheSize = await DiskCache.shared.sizeInBytes() }
+            .sheet(item: $webTask) { task in
+                HNWebSheet(task: task)
+            }
+        }
+    }
+
+    // MARK: Account
+
+    private func accountSection(_ settings: Bindable<SettingsStore>) -> some View {
+        Section {
+            Toggle(isOn: settings.accountFeaturesEnabled) {
+                Label("Account Features", systemImage: "person.crop.circle")
+            }
+
+            if settings.wrappedValue.accountFeaturesEnabled {
+                if account.isSignedIn {
+                    HStack {
+                        Label("Signed in", systemImage: "checkmark.seal")
+                        Spacer()
+                        Text(account.username ?? "")
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                    Button { webTask = .submit } label: {
+                        Label("New Submission", systemImage: "square.and.pencil")
+                    }
+                    Button(role: .destructive) {
+                        confirmSignOut = true
+                    } label: {
+                        Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                    }
+                    .confirmationDialog("Sign out of Hacker News?", isPresented: $confirmSignOut, titleVisibility: .visible) {
+                        Button("Sign Out", role: .destructive) {
+                            Task { await account.signOut(); Haptics.warning() }
+                        }
+                    }
+                } else {
+                    Button { webTask = .login } label: {
+                        Label("Sign In", systemImage: "person.crop.circle.badge.plus")
+                    }
+                }
+            }
+        } header: {
+            Text("Hacker News Account")
+        } footer: {
+            Text("Optional. Sign in to upvote, comment, and submit. Ember opens news.ycombinator.com in a secure web view — your password is never seen by Ember; only the login session is stored in your device Keychain.")
         }
     }
 

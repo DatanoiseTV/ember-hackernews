@@ -9,6 +9,8 @@ struct StoryDetailView: View {
     @Environment(SettingsStore.self) private var settings
     @Environment(BookmarkStore.self) private var bookmarks
     @Environment(ReadStore.self) private var readStore
+    @Environment(AccountStore.self) private var account
+    @Environment(VoteStore.self) private var voteStore
     @Environment(\.openArticle) private var openArticle
     @Environment(\.openURL) private var openURL
 
@@ -20,7 +22,12 @@ struct StoryDetailView: View {
     private var story: HNItem { vm.resolvedItem }
 
     @State private var pinchBaseline: Double?
+    @State private var webTask: HNWebTask?
     private var textScale: CGFloat { CGFloat(settings.readingTextScale) }
+
+    /// Whether logged-in write actions (vote) are available.
+    private var canInteract: Bool { settings.accountFeaturesEnabled && account.isSignedIn }
+    private var writer: HNWebWriter { HNWebWriter(dataStore: account.dataStore) }
 
     var body: some View {
         ScrollView {
@@ -41,6 +48,27 @@ struct StoryDetailView: View {
         .task {
             if settings.markReadOnOpen { readStore.markRead(item.id) }
             await vm.load()
+        }
+        .sheet(item: $webTask) { task in
+            HNWebSheet(task: task) { Task { await vm.load() } }
+        }
+    }
+
+    // MARK: Write actions
+
+    /// Optimistic native upvote; on any failure, revert and offer the web fallback.
+    private func upvote(_ id: Int) {
+        guard canInteract, !voteStore.hasVoted(id) else { return }
+        voteStore.markVoted(id)
+        Haptics.soft()
+        Task {
+            do {
+                try await writer.vote(itemID: id, up: true)
+            } catch {
+                voteStore.unmarkVoted(id)
+                Haptics.warning()
+                webTask = .item(itemID: id)
+            }
         }
     }
 
@@ -91,10 +119,33 @@ struct StoryDetailView: View {
             }
 
             metaBar
+            if canInteract { actionBar }
             authorRow
         }
         .padding(Spacing.l)
         .background(Theme.surface)
+    }
+
+    private var actionBar: some View {
+        HStack(spacing: Spacing.m) {
+            Button {
+                upvote(story.id)
+            } label: {
+                Label(voteStore.hasVoted(story.id) ? "Upvoted" : "Upvote",
+                      systemImage: voteStore.hasVoted(story.id) ? "arrow.up.circle.fill" : "arrow.up.circle")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .buttonStyle(.bordered)
+            .tint(Theme.upvote)
+            .disabled(voteStore.hasVoted(story.id))
+
+            Spacer(minLength: 0)
+        }
+    }
+
+    /// Story score, bumped by our own optimistic upvote (HN's API count lags).
+    private var displayedPoints: Int {
+        story.points + (voteStore.hasVoted(story.id) ? 1 : 0)
     }
 
     private func articleCard(url: URL) -> some View {
@@ -134,7 +185,7 @@ struct StoryDetailView: View {
     private var metaBar: some View {
         HStack(spacing: Spacing.l) {
             if story.kind != .job {
-                StatLabel(systemImage: "arrow.up", value: "\(story.points)", tint: Theme.upvote)
+                StatLabel(systemImage: "arrow.up", value: "\(displayedPoints)", tint: Theme.upvote)
                 StatLabel(systemImage: "bubble.left.and.bubble.right", value: "\(vm.commentCount)")
             }
             StatLabel(systemImage: "clock", value: RelativeTime.compact(story.date))
@@ -228,7 +279,10 @@ struct StoryDetailView: View {
                         CommentRow(
                             comment: comment,
                             opAuthor: story.author,
-                            isCollapsed: vm.isCollapsed(comment.id)
+                            isCollapsed: vm.isCollapsed(comment.id),
+                            canInteract: canInteract,
+                            isVoted: voteStore.hasVoted(comment.id),
+                            onVote: { upvote(comment.id) }
                         ) {
                             withAnimation(.snappy(duration: 0.22)) {
                                 vm.toggleCollapse(comment.id)

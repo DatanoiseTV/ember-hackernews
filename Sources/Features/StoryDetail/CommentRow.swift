@@ -6,6 +6,9 @@ struct CommentRow: View {
     let comment: FlatComment
     let opAuthor: String?
     let isCollapsed: Bool
+    var canInteract: Bool = false
+    var isVoted: Bool = false
+    var onVote: () -> Void = {}
     let onToggle: () -> Void
 
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -33,6 +36,9 @@ struct CommentRow: View {
                     }
                 } else {
                     bodyContent
+                    if canInteract {
+                        interactionBar
+                    }
                 }
             }
         }
@@ -86,6 +92,25 @@ struct CommentRow: View {
                 ? "Expand thread, \(comment.descendantCount) replies hidden"
                 : "Collapse thread")
         }
+    }
+
+    private var interactionBar: some View {
+        HStack(spacing: Spacing.l) {
+            Button {
+                Haptics.soft()
+                onVote()
+            } label: {
+                Label(isVoted ? "Upvoted" : "Upvote",
+                      systemImage: isVoted ? "arrow.up.circle.fill" : "arrow.up.circle")
+                    .font(AppFont.metaStrong)
+                    .foregroundStyle(isVoted ? Theme.upvote : Theme.textSecondary)
+            }
+            .buttonStyle(.plain)
+            .disabled(isVoted)
+            Spacer(minLength: 0)
+        }
+        .padding(.top, 2)
+        .accessibilityHidden(false)
     }
 
     private var bodyContent: some View {
