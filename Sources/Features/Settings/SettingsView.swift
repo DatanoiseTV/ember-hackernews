@@ -55,6 +55,9 @@ struct SettingsView: View {
                     Button { webTask = .submit } label: {
                         Label("New Submission", systemImage: "square.and.pencil")
                     }
+                    Toggle(isOn: settings.myCommentsFirst) {
+                        Label("Show My Comments First", systemImage: "arrow.up.to.line")
+                    }
                     Button(role: .destructive) {
                         confirmSignOut = true
                     } label: {

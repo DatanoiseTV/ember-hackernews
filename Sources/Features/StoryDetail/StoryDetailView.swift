@@ -11,6 +11,7 @@ struct StoryDetailView: View {
     @Environment(ReadStore.self) private var readStore
     @Environment(AccountStore.self) private var account
     @Environment(VoteStore.self) private var voteStore
+    @Environment(PendingCommentStore.self) private var pendingComments
     @Environment(\.openArticle) private var openArticle
     @Environment(\.openURL) private var openURL
 
@@ -23,10 +24,16 @@ struct StoryDetailView: View {
 
     @State private var pinchBaseline: Double?
     @State private var webTask: HNWebTask?
+    @State private var composeTarget: ComposeTarget?
+    @State private var editError: String?
     private var textScale: CGFloat { CGFloat(settings.readingTextScale) }
 
-    /// Whether logged-in write actions (vote) are available.
+    /// Whether logged-in write actions (vote / reply / comment) are available.
     private var canInteract: Bool { settings.accountFeaturesEnabled && account.isSignedIn }
+    /// The author whose top-level threads should float to the top, if enabled.
+    private var floatAuthor: String? {
+        (canInteract && settings.myCommentsFirst) ? account.username : nil
+    }
     private var writer: HNWebWriter { HNWebWriter(dataStore: account.dataStore) }
 
     var body: some View {
@@ -40,6 +47,7 @@ struct StoryDetailView: View {
             .frame(maxWidth: .infinity)
         }
         .background(Theme.background)
+        .refreshable { await vm.load() }
         .navigationTitle(story.host ?? "Discussion")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbar }
@@ -47,10 +55,42 @@ struct StoryDetailView: View {
         .gesture(pinchToZoom)
         .task {
             if settings.markReadOnOpen { readStore.markRead(item.id) }
+            vm.floatAuthor = floatAuthor
+            vm.sort = settings.commentSort
+            vm.pendingStore = pendingComments
             await vm.load()
         }
+        .onChange(of: floatAuthor) { _, newValue in vm.floatAuthor = newValue }
+        .onChange(of: settings.commentSort) { _, newValue in vm.sort = newValue }
         .sheet(item: $webTask) { task in
             HNWebSheet(task: task) { Task { await vm.load() } }
+        }
+        .sheet(item: $composeTarget) { target in
+            CommentComposer(target: target) { text in
+                let poster = HNWebWriter(dataStore: account.dataStore)
+                switch target.kind {
+                case .comment(let parentID):
+                    try await poster.post(parentID: parentID, storyID: target.storyID, text: text)
+                case .edit(let commentID):
+                    try await poster.editComment(commentID: commentID, text: text)
+                }
+            } onPosted: { text in
+                // Algolia lags by minutes, so reflect the change immediately and
+                // let a later refresh reconcile it.
+                switch target.kind {
+                case .comment(let parentID):
+                    pendingComments.add(storyID: story.id, parentID: parentID,
+                                        author: account.username ?? "you", text: text)
+                case .edit(let commentID):
+                    pendingComments.addEdit(commentID: commentID, text: text)
+                }
+                Task { await vm.load() }
+            }
+        }
+        .alert("Couldn't edit", isPresented: Binding(get: { editError != nil }, set: { if !$0 { editError = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(editError ?? "")
         }
     }
 
@@ -68,6 +108,39 @@ struct StoryDetailView: View {
                 voteStore.unmarkVoted(id)
                 Haptics.warning()
                 webTask = .item(itemID: id)
+            }
+        }
+    }
+
+    /// Open the native composer for a top-level comment or a reply.
+    private func compose(parentID: Int, title: String, context: String?) {
+        composeTarget = ComposeTarget(kind: .comment(parentID: parentID), storyID: story.id, title: title, context: context)
+    }
+
+    /// Whether `comment` is the signed-in user's and still within HN's ~2h edit window.
+    private func canEdit(_ comment: FlatComment) -> Bool {
+        guard canInteract, let me = account.username, comment.author == me else { return false }
+        guard let date = comment.date else { return true } // unknown age — let HN decide
+        return Date().timeIntervalSince(date) < Self.editWindow
+    }
+    private static let editWindow: TimeInterval = 2 * 60 * 60
+
+    /// Fetch the comment's raw source, then open the editor prefilled with it.
+    private func edit(_ comment: FlatComment) {
+        Task {
+            do {
+                let poster = HNWebWriter(dataStore: account.dataStore)
+                let source = try await poster.fetchEditableSource(commentID: comment.id)
+                composeTarget = ComposeTarget(
+                    kind: .edit(commentID: comment.id),
+                    storyID: story.id,
+                    title: "Edit Comment",
+                    context: nil,
+                    initialText: source
+                )
+            } catch {
+                Haptics.warning()
+                editError = (error as? LocalizedError)?.errorDescription ?? "Couldn't load the comment for editing."
             }
         }
     }
@@ -138,6 +211,15 @@ struct StoryDetailView: View {
             .buttonStyle(.bordered)
             .tint(Theme.upvote)
             .disabled(voteStore.hasVoted(story.id))
+
+            Button {
+                compose(parentID: story.id, title: "Add Comment", context: story.displayTitle)
+            } label: {
+                Label("Comment", systemImage: "bubble.left")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .buttonStyle(.bordered)
+            .tint(settings.accent.color)
 
             Spacer(minLength: 0)
         }
@@ -235,6 +317,7 @@ struct StoryDetailView: View {
                 }
                 Spacer()
                 if case .loaded = vm.phase, vm.commentCount > 0 {
+                    sortMenu
                     Button {
                         Haptics.tap()
                         withAnimation(.snappy) { vm.toggleCollapseAll() }
@@ -244,7 +327,7 @@ struct StoryDetailView: View {
                                 ? "arrow.down.right.and.arrow.up.left"
                                 : "arrow.up.left.and.arrow.down.right")
                             .font(.caption.weight(.semibold))
-                            .labelStyle(.titleAndIcon)
+                            .labelStyle(.iconOnly)
                     }
                     .foregroundStyle(settings.accent.color)
                 }
@@ -257,6 +340,27 @@ struct StoryDetailView: View {
             commentsContent
         }
         .padding(.top, Spacing.s)
+    }
+
+    private var sortMenu: some View {
+        Menu {
+            Picker("Sort Comments", selection: Binding(
+                get: { settings.commentSort },
+                set: { newValue in
+                    Haptics.selection()
+                    withAnimation(.snappy) { settings.commentSort = newValue }
+                }
+            )) {
+                ForEach(CommentSort.allCases) { option in
+                    Label(option.title, systemImage: option.systemImage).tag(option)
+                }
+            }
+        } label: {
+            Label("Sort", systemImage: "arrow.up.arrow.down")
+                .font(.caption.weight(.semibold))
+                .labelStyle(.iconOnly)
+        }
+        .foregroundStyle(settings.accent.color)
     }
 
     @ViewBuilder private var commentsContent: some View {
@@ -282,7 +386,10 @@ struct StoryDetailView: View {
                             isCollapsed: vm.isCollapsed(comment.id),
                             canInteract: canInteract,
                             isVoted: voteStore.hasVoted(comment.id),
-                            onVote: { upvote(comment.id) }
+                            canEdit: canEdit(comment),
+                            onReply: { compose(parentID: comment.id, title: "Reply", context: "Replying to \(comment.author)") },
+                            onVote: { upvote(comment.id) },
+                            onEdit: { edit(comment) }
                         ) {
                             withAnimation(.snappy(duration: 0.22)) {
                                 vm.toggleCollapse(comment.id)

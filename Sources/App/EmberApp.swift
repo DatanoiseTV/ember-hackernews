@@ -8,6 +8,7 @@ struct EmberApp: App {
     @State private var linkOpener = LinkOpener()
     @State private var account = AccountStore()
     @State private var voteStore = VoteStore()
+    @State private var pendingComments = PendingCommentStore()
 
     var body: some Scene {
         WindowGroup {
@@ -18,6 +19,7 @@ struct EmberApp: App {
                 .environment(linkOpener)
                 .environment(account)
                 .environment(voteStore)
+                .environment(pendingComments)
                 .task {
                     await account.restore()
                 }

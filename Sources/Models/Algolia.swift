@@ -26,6 +26,8 @@ struct FlatComment: Identifiable, Hashable {
     let depth: Int
     let descendantCount: Int
     let isDeleted: Bool
+    /// A comment the user just posted that Algolia hasn't indexed yet.
+    var isPending: Bool = false
 }
 
 extension AlgoliaItem {

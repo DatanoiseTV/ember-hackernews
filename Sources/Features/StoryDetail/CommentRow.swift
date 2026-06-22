@@ -8,7 +8,10 @@ struct CommentRow: View {
     let isCollapsed: Bool
     var canInteract: Bool = false
     var isVoted: Bool = false
+    var canEdit: Bool = false
+    var onReply: () -> Void = {}
     var onVote: () -> Void = {}
+    var onEdit: () -> Void = {}
     let onToggle: () -> Void
 
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -36,7 +39,11 @@ struct CommentRow: View {
                     }
                 } else {
                     bodyContent
-                    if canInteract {
+                    if comment.isPending {
+                        Label("Posting… will appear once Hacker News updates", systemImage: "clock.arrow.circlepath")
+                            .font(AppFont.meta)
+                            .foregroundStyle(Theme.textTertiary)
+                    } else if canInteract {
                         interactionBar
                     }
                 }
@@ -107,6 +114,28 @@ struct CommentRow: View {
             }
             .buttonStyle(.plain)
             .disabled(isVoted)
+
+            Button {
+                Haptics.tap()
+                onReply()
+            } label: {
+                Label("Reply", systemImage: "arrowshape.turn.up.left")
+                    .font(AppFont.metaStrong)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            .buttonStyle(.plain)
+
+            if canEdit {
+                Button {
+                    Haptics.tap()
+                    onEdit()
+                } label: {
+                    Label("Edit", systemImage: "pencil")
+                        .font(AppFont.metaStrong)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                .buttonStyle(.plain)
+            }
             Spacer(minLength: 0)
         }
         .padding(.top, 2)
