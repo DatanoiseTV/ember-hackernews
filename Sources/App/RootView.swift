@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Adaptive root: a sidebar-driven split view on Mac and regular-width iPad,
 /// and a tab bar on iPhone. Shared app chrome (accent, color scheme, link
@@ -20,7 +21,9 @@ struct RootView: View {
             }
         }
         .tint(settings.accent.color)
-        .preferredColorScheme(settings.appearance.colorScheme)
+        .onChange(of: settings.appearance, initial: true) { _, appearance in
+            applyInterfaceStyle(appearance.uiStyle)
+        }
         // Route explicit article opens through the in-app browser (or system).
         .environment(\.openArticle) { url in
             if settings.openLinksInApp {
@@ -43,6 +46,17 @@ struct RootView: View {
         }
         .fullScreenCover(isPresented: onboardingBinding) {
             OnboardingView()
+        }
+    }
+
+    /// Apply the chosen interface style to every window so System truly
+    /// follows the device and a forced Light/Dark reliably reverts.
+    private func applyInterfaceStyle(_ style: UIUserInterfaceStyle) {
+        for scene in UIApplication.shared.connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else { continue }
+            for window in windowScene.windows {
+                window.overrideUserInterfaceStyle = style
+            }
         }
     }
 

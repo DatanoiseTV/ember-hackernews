@@ -45,7 +45,6 @@ struct OnboardingView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.background.ignoresSafeArea())
         .tint(settings.accent.color)
-        .preferredColorScheme(settings.appearance.colorScheme)
         .onAppear {
             applySmartDefaults()
             #if DEBUG

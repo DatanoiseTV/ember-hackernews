@@ -24,6 +24,16 @@ enum AppAppearance: String, CaseIterable, Identifiable, Codable {
         case .dark: .dark
         }
     }
+    /// UIKit interface style applied directly to the window. `.unspecified`
+    /// (System) lets the window follow the device — unlike SwiftUI's
+    /// `.preferredColorScheme(nil)`, which fails to revert once forced.
+    var uiStyle: UIUserInterfaceStyle {
+        switch self {
+        case .system: .unspecified
+        case .light: .light
+        case .dark: .dark
+        }
+    }
 }
 
 /// User preferences, persisted to `UserDefaults` and observed app-wide.
