@@ -54,7 +54,7 @@ enum Theme {
 // MARK: - User-selectable accent
 
 enum AccentTheme: String, CaseIterable, Identifiable, Codable {
-    case ember, ocean, indigo, magenta, forest, graphite
+    case ember, ocean, indigo, magenta, forest, graphite, amber, taupe
 
     var id: String { rawValue }
 
@@ -66,6 +66,8 @@ enum AccentTheme: String, CaseIterable, Identifiable, Codable {
         case .magenta: "Magenta"
         case .forest: "Forest"
         case .graphite: "Graphite"
+        case .amber: "Amber"
+        case .taupe: "Taupe"
         }
     }
 
@@ -77,6 +79,11 @@ enum AccentTheme: String, CaseIterable, Identifiable, Codable {
         case .magenta: Color(light: 0xD12C7E, dark: 0xFF63B0)
         case .forest: Color(light: 0x1E8E55, dark: 0x46C97B)
         case .graphite: Color(light: 0x4A4A52, dark: 0xB7B7C2)
+        case .amber: Color(light: 0xD69E1E, dark: 0xF5C84B)
+        // #A79F94 is the average colour of ~26,000 works in MoMA's collection
+        // (c. 2009); a muted taupe. In Dark Mode it's pushed warmer/tan so it
+        // reads as distinct from Graphite's cool grey rather than just grey.
+        case .taupe: Color(light: 0xA79F94, dark: 0xC9B79A)
         }
     }
 }
