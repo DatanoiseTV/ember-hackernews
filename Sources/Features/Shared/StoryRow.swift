@@ -12,9 +12,13 @@ struct StoryRow: View {
     @Environment(ReadStore.self) private var readStore
     @Environment(AccountStore.self) private var account
     @Environment(FavoritesStore.self) private var favorites
+    @Environment(VoteStore.self) private var voteStore
     @Environment(\.openArticle) private var openArticle
     @Environment(\.accessibilityDifferentiateWithoutColor) private var systemDiffNoColor
     @Environment(\.dynamicTypeSize) private var typeSize
+
+    /// Web fallback shown when a native upvote is rejected (expired session, etc.).
+    @State private var webTask: HNWebTask?
 
     private var isRead: Bool { readStore.isRead(item.id) }
     /// When signed in, the save action manages HN favorites; otherwise local bookmarks.
@@ -29,6 +33,33 @@ struct StoryRow: View {
             Task { await favorites.toggle(item.id, writer: HNWebWriter(dataStore: account.dataStore)) }
         } else {
             bookmarks.toggle(item)
+        }
+    }
+
+    /// Whether the signed-in user can upvote this item directly from the row.
+    /// HN shows no vote arrow on your own posts, so hide the affordance there
+    /// rather than letting the tap fail into the web fallback.
+    private var canVote: Bool {
+        settings.accountFeaturesEnabled && account.isSignedIn
+            && item.kind != .job && item.author != account.username
+    }
+    private var hasVoted: Bool { voteStore.hasVoted(item.id) }
+    /// Points bumped by our own optimistic upvote (HN's API count lags).
+    private var displayedPoints: Int { item.points + (hasVoted ? 1 : 0) }
+
+    /// Optimistic native upvote; on any failure, revert and offer the web fallback.
+    private func upvote() {
+        guard canVote, !hasVoted else { return }
+        voteStore.markVoted(item.id)
+        Haptics.soft()
+        Task {
+            do {
+                try await HNWebWriter(dataStore: account.dataStore).vote(itemID: item.id, up: true)
+            } catch {
+                voteStore.unmarkVoted(item.id)
+                Haptics.warning()
+                webTask = .item(itemID: item.id)
+            }
         }
     }
 
@@ -94,6 +125,9 @@ struct StoryRow: View {
         .accessibilityAddTraits(.isButton)
         .accessibilityActions { rowActions }
         .contextMenu { contextMenu } preview: { StoryPreview(item: item) }
+        .sheet(item: $webTask) { task in
+            HNWebSheet(task: task)
+        }
     }
 
     // MARK: Pieces
@@ -129,7 +163,7 @@ struct StoryRow: View {
     private var metaRow: some View {
         HStack(spacing: Spacing.m) {
             if item.kind != .job {
-                StatLabel(systemImage: "arrow.up", value: "\(item.points)", tint: Theme.upvote)
+                upvoteStat
                 StatLabel(systemImage: "bubble.left", value: "\(item.commentCount)")
             }
             if let tag = categoryTag, item.host != nil {
@@ -145,11 +179,29 @@ struct StoryRow: View {
         }
     }
 
+    /// Points stat that doubles as a one-tap upvote when signed in.
+    @ViewBuilder private var upvoteStat: some View {
+        if canVote {
+            Button { upvote() } label: {
+                StatLabel(systemImage: hasVoted ? "arrow.up.circle.fill" : "arrow.up",
+                          value: "\(displayedPoints)", tint: Theme.upvote)
+            }
+            .buttonStyle(.plain)
+            .disabled(hasVoted)
+            .accessibilityHidden(true)
+        } else {
+            StatLabel(systemImage: "arrow.up", value: "\(displayedPoints)", tint: Theme.upvote)
+        }
+    }
+
     // MARK: Actions
 
     @ViewBuilder private var rowActions: some View {
         if let url = item.articleURL {
             Button("Open Link") { openArticle(url) }
+        }
+        if canVote, !hasVoted {
+            Button("Upvote") { upvote() }
         }
         Button(saveActionTitle) {
             toggleSaved()
