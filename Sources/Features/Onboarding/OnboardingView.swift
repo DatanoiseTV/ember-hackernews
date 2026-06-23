@@ -314,7 +314,7 @@ struct OnboardingView: View {
                     }
                     .buttonStyle(.plain)
 
-                    Text("Login happens on news.ycombinator.com in a secure web view — your password is never seen by Ember; only the session is stored in your device Keychain.")
+                    Text("Login happens on news.ycombinator.com in a secure web view — your password is never seen by Ember; only the session is stored in your device Keychain. Acting on your account is subject to the [Hacker News guidelines](https://news.ycombinator.com/newsguidelines.html).")
                         .font(.footnote)
                         .foregroundStyle(Theme.textTertiary)
                         .multilineTextAlignment(.center)

@@ -77,7 +77,7 @@ struct SettingsView: View {
         } header: {
             Text("Hacker News Account")
         } footer: {
-            Text("Optional. Sign in to upvote, comment, and submit. Ember opens news.ycombinator.com in a secure web view — your password is never seen by Ember; only the login session is stored in your device Keychain.")
+            Text("Optional. Sign in to upvote, comment, and submit. Ember opens news.ycombinator.com in a secure web view — your password is never seen by Ember; only the login session is stored in your device Keychain. These actions are performed on Hacker News on your behalf, so it's your responsibility to follow the [Hacker News guidelines and terms](https://news.ycombinator.com/newsguidelines.html).")
         }
     }
 

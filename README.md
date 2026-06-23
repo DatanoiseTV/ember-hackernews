@@ -197,13 +197,22 @@ swift Tools/FrameScreenshot.swift in.png docs/screenshots/x.png  # device-framed
 
 ## Privacy
 
-Ember talks only to the official, public Hacker News APIs — the
+Ember reads from the official, public Hacker News APIs — the
 [Firebase API](https://github.com/HackerNews/API) for feeds, items, and users,
 and the [Algolia HN Search API](https://hn.algolia.com/api) for comment trees and
-search. There is no scraping, no login, and no account. The app collects no
-personal data, contains no analytics or tracking SDKs, and stores everything
-(settings, saved stories, read state, the offline cache) locally on device. This
-is declared in [`Resources/PrivacyInfo.xcprivacy`](Resources/PrivacyInfo.xcprivacy).
+search. The app collects no personal data, contains no analytics or tracking
+SDKs, and stores everything (settings, saved stories, read state, the offline
+cache) locally on device. This is declared in
+[`Resources/PrivacyInfo.xcprivacy`](Resources/PrivacyInfo.xcprivacy).
+
+Signing in to a Hacker News account is **optional and off by default**. When you
+enable it, login happens on `news.ycombinator.com` inside a secure web view —
+your password is never seen by Ember; only the resulting login session is stored
+in your device Keychain, and upvoting, commenting, favoriting, and submitting are
+performed on Hacker News's own pages on your behalf. Because those actions act on
+your real account, using them is subject to the
+[Hacker News guidelines and terms](https://news.ycombinator.com/newsguidelines.html);
+following them is your responsibility.
 
 ## Acknowledgements
 
