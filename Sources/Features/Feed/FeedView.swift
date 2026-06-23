@@ -68,7 +68,8 @@ struct FeedView: View {
                 ZStack {
                     // Hide the default disclosure chevron for a cleaner row.
                     NavigationLink(value: story) { EmptyView() }.opacity(0)
-                    StoryRow(item: story, rank: index + 1)
+                    StoryRow(item: story, rank: index + 1,
+                             onSelectUser: { path.append(UserRoute(username: $0)) })
                 }
                 .listRowInsets(EdgeInsets(top: 0, leading: Spacing.l, bottom: 0, trailing: Spacing.l))
                 .listRowSeparatorTint(Theme.separator)

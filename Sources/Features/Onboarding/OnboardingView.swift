@@ -633,12 +633,13 @@ private struct OnboardingPreviewRow: View {
                     .font(AppFont.meta)
                     .foregroundStyle(Theme.textSecondary)
                 HStack(spacing: Spacing.m) {
-                    StatLabel(systemImage: "arrow.up", value: "842", tint: accent)
+                    StatLabel(systemImage: "arrow.up", value: "842", tint: Theme.upvote)
                     StatLabel(systemImage: "bubble.left", value: "312")
-                    Text("by pg · 1h")
-                        .font(AppFont.meta)
-                        .foregroundStyle(Theme.textSecondary)
+                    Text("pg")
+                    Text("1h")
                 }
+                .font(AppFont.meta)
+                .foregroundStyle(Theme.textSecondary)
                 Text("paulgraham.com/greatwork.html")
                     .font(AppFont.meta)
                     .foregroundStyle(accent)

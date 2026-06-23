@@ -177,7 +177,8 @@ struct SavedView: View {
     @ViewBuilder private func row(_ story: HNItem, @ViewBuilder swipe: () -> some View) -> some View {
         ZStack {
             NavigationLink(value: story) { EmptyView() }.opacity(0)
-            StoryRow(item: story)
+            StoryRow(item: story,
+                     onSelectUser: { path.append(UserRoute(username: $0)) })
         }
         .listRowInsets(EdgeInsets(top: 0, leading: Spacing.l, bottom: 0, trailing: Spacing.l))
         .listRowSeparatorTint(Theme.separator)

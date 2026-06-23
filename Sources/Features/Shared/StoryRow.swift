@@ -6,6 +6,10 @@ import SwiftUI
 struct StoryRow: View {
     let item: HNItem
     var rank: Int?
+    /// When provided, the username becomes a tappable shortcut to the author's
+    /// profile. Passed by containers that own a navigation path; when nil the
+    /// username is plain text so the row's own tap (the story) stays intact.
+    var onSelectUser: ((String) -> Void)?
 
     @Environment(SettingsStore.self) private var settings
     @Environment(BookmarkStore.self) private var bookmarks
@@ -97,10 +101,7 @@ struct StoryRow: View {
                     .fixedSize(horizontal: false, vertical: true)
 
                 if let host = item.host {
-                    Text(host)
-                        .font(AppFont.meta)
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
+                    hostLabel(host)
                 }
 
                 metaRow
@@ -160,6 +161,24 @@ struct StoryRow: View {
         .padding(.top, 1)
     }
 
+    /// Host as a tappable shortcut to the article when one exists.
+    @ViewBuilder private func hostLabel(_ host: String) -> some View {
+        let label = Text(host)
+            .font(AppFont.meta)
+            .foregroundStyle(Theme.textSecondary)
+            .lineLimit(1)
+        if let url = item.articleURL {
+            Button {
+                Haptics.tap()
+                openArticle(url)
+            } label: { label }
+            .buttonStyle(.plain)
+            .accessibilityHidden(true)
+        } else {
+            label
+        }
+    }
+
     private var metaRow: some View {
         HStack(spacing: Spacing.m) {
             if item.kind != .job {
@@ -169,14 +188,23 @@ struct StoryRow: View {
             if let tag = categoryTag, item.host != nil {
                 TagBadge(text: tag.0, color: tag.1)
             }
-            HStack(spacing: 4) {
+            // Author and time-since are spaced like the other meta items (no
+            // separator bullet) so the whole row reads consistently.
+            // A plain Button (not a NavigationLink) keeps the username tappable
+            // without the List promoting it to the row's tap action — the rest of
+            // the row still opens the story.
+            if let onSelectUser {
+                Button { onSelectUser(item.author) } label: {
+                    Text(item.author).lineLimit(1)
+                }
+                .buttonStyle(.plain)
+            } else {
                 Text(item.author).lineLimit(1)
-                Text("·")
-                Text(RelativeTime.compact(item.date))
             }
-            .font(AppFont.meta)
-            .foregroundStyle(Theme.textSecondary)
+            Text(RelativeTime.compact(item.date))
         }
+        .font(AppFont.meta)
+        .foregroundStyle(Theme.textSecondary)
     }
 
     /// Points stat that doubles as a one-tap upvote when signed in.
