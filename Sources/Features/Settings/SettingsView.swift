@@ -134,6 +134,9 @@ struct SettingsView: View {
             Toggle(isOn: settings.showThumbnails) {
                 Label("Show Story Thumbnails", systemImage: "square.fill.text.grid.1x2")
             }
+            Toggle(isOn: settings.urlAboveTitle) {
+                Label("Show URL Above Title", systemImage: "link")
+            }
         }
     }
 

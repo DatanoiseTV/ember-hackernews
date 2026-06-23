@@ -260,6 +260,8 @@ struct OnboardingView: View {
                     ToggleRow(title: "Rank numbers", subtitle: "Show numeric position in feeds", systemImage: "number", isOn: settings.showRankNumbers)
                     Divider().padding(.leading, 40)
                     ToggleRow(title: "Story thumbnails", subtitle: "Show the site favicon next to each story", systemImage: "square.fill.text.grid.1x2", isOn: settings.showThumbnails)
+                    Divider().padding(.leading, 40)
+                    ToggleRow(title: "URL above title", subtitle: "Show the site link above each headline, classic HN style", systemImage: "link", isOn: settings.urlAboveTitle)
                 }
                 .background(Theme.surface)
                 .clipShape(RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
@@ -383,7 +385,7 @@ struct OnboardingView: View {
                 .font(.system(size: 10, weight: .heavy))
                 .tracking(1)
                 .foregroundStyle(Theme.textTertiary)
-            OnboardingPreviewRow(accent: settings.accent.color, showThumbnail: settings.showThumbnails, showRank: settings.showRankNumbers, underlineLinks: settings.underlineLinks)
+            OnboardingPreviewRow(accent: settings.accent.color, showThumbnail: settings.showThumbnails, showRank: settings.showRankNumbers, underlineLinks: settings.underlineLinks, urlAboveTitle: settings.urlAboveTitle)
                 .padding(Spacing.m)
                 .background(Theme.surface)
                 .clipShape(RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
@@ -608,16 +610,25 @@ private struct OnboardingPreviewRow: View {
     var showThumbnail: Bool = true
     var showRank: Bool = true
     var underlineLinks: Bool = true
+    var urlAboveTitle: Bool = false
+
+    private var hostLabel: some View {
+        Text("paulgraham.com")
+            .font(AppFont.meta)
+            .foregroundStyle(Theme.textSecondary)
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.m) {
             if showRank {
+                // Mirror StoryRow: when the URL sits above the title, shrink the
+                // rank and top-align it so they share the first line.
                 Text("42")
-                    .font(.system(.footnote, design: .rounded).weight(.bold))
+                    .font(urlAboveTitle ? AppFont.meta : .system(.footnote, design: .rounded).weight(.bold))
                     .monospacedDigit()
                     .foregroundStyle(Theme.textTertiary)
                     .frame(width: 22, alignment: .trailing)
-                    .padding(.top, 2)
+                    .padding(.top, urlAboveTitle ? 0 : 2)
             }
             if showThumbnail {
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -626,12 +637,11 @@ private struct OnboardingPreviewRow: View {
                     .overlay(Image(systemName: "flame.fill").foregroundStyle(accent))
             }
             VStack(alignment: .leading, spacing: 5) {
+                if urlAboveTitle { hostLabel }
                 Text("How to Do Great Work")
                     .font(AppFont.storyTitle)
                     .foregroundStyle(Theme.textPrimary)
-                Text("paulgraham.com")
-                    .font(AppFont.meta)
-                    .foregroundStyle(Theme.textSecondary)
+                if !urlAboveTitle { hostLabel }
                 HStack(spacing: Spacing.m) {
                     StatLabel(systemImage: "arrow.up", value: "842", tint: Theme.upvote)
                     StatLabel(systemImage: "bubble.left", value: "312")

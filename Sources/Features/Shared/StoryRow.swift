@@ -81,12 +81,16 @@ struct StoryRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.m) {
             if settings.showRankNumbers, let rank {
+                // When the URL sits above the title, shrink the rank to the URL's
+                // size and top-align the two so they share the first line.
                 Text("\(rank)")
-                    .font(.system(.footnote, design: .rounded).weight(.bold))
+                    .font(settings.urlAboveTitle
+                          ? AppFont.meta
+                          : .system(.footnote, design: .rounded).weight(.bold))
                     .monospacedDigit()
                     .foregroundStyle(Theme.textTertiary)
                     .frame(width: 22, alignment: .trailing)
-                    .padding(.top, 2)
+                    .padding(.top, settings.urlAboveTitle ? 0 : 2)
             }
 
             if settings.showThumbnails {
@@ -94,13 +98,17 @@ struct StoryRow: View {
             }
 
             VStack(alignment: .leading, spacing: 5) {
+                if settings.urlAboveTitle, let host = item.host {
+                    hostLabel(host)
+                }
+
                 Text(item.displayTitle)
                     .font(AppFont.storyTitle)
                     .foregroundStyle(isRead ? Theme.textSecondary : Theme.textPrimary)
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
 
-                if let host = item.host {
+                if !settings.urlAboveTitle, let host = item.host {
                     hostLabel(host)
                 }
 

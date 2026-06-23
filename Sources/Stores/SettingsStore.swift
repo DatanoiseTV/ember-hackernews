@@ -51,6 +51,8 @@ final class SettingsStore {
     var openLinksInApp: Bool {
         didSet { store(openLinksInApp, .openLinksInApp) }
     }
+    /// Open every in-app web link (story articles and inline comment/text links)
+    /// in Safari Reader when available. Requires `openLinksInApp`.
     var readerMode: Bool {
         didSet { store(readerMode, .readerMode) }
     }
@@ -60,6 +62,11 @@ final class SettingsStore {
     /// Show the favicon/image thumbnail on each story row.
     var showThumbnails: Bool {
         didSet { store(showThumbnails, .showThumbnails) }
+    }
+    /// Show the source URL/host above the title (aligned with the rank number)
+    /// rather than beneath it. Mirrors the classic HN site layout.
+    var urlAboveTitle: Bool {
+        didSet { store(urlAboveTitle, .urlAboveTitle) }
     }
     /// Opt-in: enable signing in to a Hacker News account for voting, commenting
     /// and submitting. Default off; the app stays read-only and API-only when off.
@@ -123,6 +130,7 @@ final class SettingsStore {
         readerMode = defaults.object(forKey: Key.readerMode.rawValue) as? Bool ?? false
         markReadOnOpen = defaults.object(forKey: Key.markReadOnOpen.rawValue) as? Bool ?? true
         showThumbnails = defaults.object(forKey: Key.showThumbnails.rawValue) as? Bool ?? true
+        urlAboveTitle = defaults.object(forKey: Key.urlAboveTitle.rawValue) as? Bool ?? false
         accountFeaturesEnabled = defaults.object(forKey: Key.accountFeaturesEnabled.rawValue) as? Bool ?? false
         myCommentsFirst = defaults.object(forKey: Key.myCommentsFirst.rawValue) as? Bool ?? true
         commentSort = CommentSort(rawValue: defaults.string(forKey: Key.commentSort.rawValue) ?? "") ?? .ranked
@@ -150,6 +158,7 @@ final class SettingsStore {
         distinguishWithoutColor = false
         showRankNumbers = true
         showThumbnails = true
+        urlAboveTitle = false
         readingTextScale = 1.0
         hasCompletedOnboarding = false
     }
@@ -162,6 +171,7 @@ final class SettingsStore {
         case readerMode = "settings.readerMode"
         case markReadOnOpen = "settings.markReadOnOpen"
         case showThumbnails = "settings.showThumbnails"
+        case urlAboveTitle = "settings.urlAboveTitle"
         case accountFeaturesEnabled = "settings.accountFeaturesEnabled"
         case myCommentsFirst = "settings.myCommentsFirst"
         case commentSort = "settings.commentSort"
