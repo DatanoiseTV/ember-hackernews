@@ -8,9 +8,10 @@ Ember is a SwiftUI app that reads Hacker News the way a native app should:
 threaded comments rendered natively, clean reading typography, a personalized
 first-run setup, full dark mode, offline reading, and accessibility treated as a
 feature rather than an afterthought. One codebase adapts from a tab bar on
-iPhone to a three-pane layout on Mac and iPad.
+iPhone to a three-pane layout on Mac and iPad — and an experimental Android
+build shares the same Swift via [Skip](https://skip.dev).
 
-![Platform](https://img.shields.io/badge/platform-iPhone%20%C2%B7%20iPad%20%C2%B7%20Mac-black)
+![Platform](https://img.shields.io/badge/platform-iPhone%20%C2%B7%20iPad%20%C2%B7%20Mac%20%C2%B7%20Android-black)
 ![Swift](https://img.shields.io/badge/Swift-5.9-orange)
 ![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-blue)
 ![Dependencies](https://img.shields.io/badge/dependencies-none-brightgreen)
@@ -95,7 +96,34 @@ Sources/
     Desktop/        NavigationSplitView layout for Mac / large iPad
 Resources/          Assets, app icon, Info.plist, bundled Inter font
 Tools/              Icon generator, screenshot device-framer
+EmberSkip/          Android app (Skip — SwiftUI transpiled to Jetpack Compose)
 ```
+
+## Android (experimental, via Skip)
+
+`EmberSkip/` is an Android build of Ember using [Skip](https://skip.dev), which
+transpiles SwiftUI to Kotlin / Jetpack Compose. It shares the design and reuses
+the same Hacker News Firebase + Algolia APIs, and currently covers the feed
+(all six lists), story detail with the linked article, and a fetched, threaded
+comment view — all written in Swift.
+
+| Android · feed | Android · story & comments |
+| :---: | :---: |
+| <img src="docs/screenshots/android-feed.png" width="230"> | <img src="docs/screenshots/android-detail.png" width="230"> |
+
+Build the APK (requires the Skip toolchain — `brew install skiptools/skip/skip`,
+plus a JDK and the Android SDK; run `skip checkup` to verify):
+
+```bash
+cd EmberSkip
+swift build                          # transpiles Swift -> Kotlin
+cd Android && gradle assembleDebug   # -> .build/Android/app/outputs/apk/debug/app-debug.apk
+```
+
+This is an early port: the polished iOS/Mac chrome (custom theme, onboarding,
+offline cache, settings) is not yet brought across, and Android uses plain text
+where iOS uses SF Symbols. The shared data layer (models, networking, comment
+parsing) is the same Swift on both platforms.
 
 ## Getting started
 
