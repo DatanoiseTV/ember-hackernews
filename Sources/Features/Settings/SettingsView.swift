@@ -125,7 +125,7 @@ struct SettingsView: View {
                 Label("Open Links in App", systemImage: "safari")
             }
             Toggle(isOn: settings.readerMode) {
-                Label("Use Reader When Available", systemImage: "doc.plaintext")
+                Label("Open Links in Reader Mode", systemImage: "doc.plaintext")
             }
             .disabled(!settings.wrappedValue.openLinksInApp)
             Toggle(isOn: settings.markReadOnOpen) {
