@@ -7,6 +7,9 @@ struct CommentRow: View {
     let opAuthor: String?
     let isCollapsed: Bool
     var canInteract: Bool = false
+    /// Whether the upvote button is offered — false for your own comments, which
+    /// HN won't let you vote on (no arrow), while reply/edit stay available.
+    var canVote: Bool = false
     var isVoted: Bool = false
     var canEdit: Bool = false
     var onReply: () -> Void = {}
@@ -103,17 +106,19 @@ struct CommentRow: View {
 
     private var interactionBar: some View {
         HStack(spacing: Spacing.l) {
-            Button {
-                Haptics.soft()
-                onVote()
-            } label: {
-                Label(isVoted ? "Upvoted" : "Upvote",
-                      systemImage: isVoted ? "arrow.up.circle.fill" : "arrow.up.circle")
-                    .font(AppFont.metaStrong)
-                    .foregroundStyle(isVoted ? Theme.upvote : Theme.textSecondary)
+            if canVote {
+                Button {
+                    Haptics.soft()
+                    onVote()
+                } label: {
+                    Label(isVoted ? "Upvoted" : "Upvote",
+                          systemImage: isVoted ? "arrow.up.circle.fill" : "arrow.up.circle")
+                        .font(AppFont.metaStrong)
+                        .foregroundStyle(isVoted ? Theme.upvote : Theme.textSecondary)
+                }
+                .buttonStyle(.plain)
+                .disabled(isVoted)
             }
-            .buttonStyle(.plain)
-            .disabled(isVoted)
 
             Button {
                 Haptics.tap()

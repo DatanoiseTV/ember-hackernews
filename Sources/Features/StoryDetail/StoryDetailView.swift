@@ -31,6 +31,11 @@ struct StoryDetailView: View {
 
     /// Whether logged-in write actions (vote / reply / comment) are available.
     private var canInteract: Bool { settings.accountFeaturesEnabled && account.isSignedIn }
+    /// Whether `author`'s item can be upvoted. You can't vote on your own posts —
+    /// HN renders no arrow, so we hide the affordance instead of failing into web.
+    private func canVote(_ author: String) -> Bool {
+        canInteract && author != account.username
+    }
     /// The author whose top-level threads should float to the top, if enabled.
     private var floatAuthor: String? {
         (canInteract && settings.myCommentsFirst) ? account.username : nil
@@ -215,16 +220,18 @@ struct StoryDetailView: View {
 
     private var actionBar: some View {
         HStack(spacing: Spacing.m) {
-            Button {
-                upvote(story.id)
-            } label: {
-                Label(voteStore.hasVoted(story.id) ? "Upvoted" : "Upvote",
-                      systemImage: voteStore.hasVoted(story.id) ? "arrow.up.circle.fill" : "arrow.up.circle")
-                    .font(.subheadline.weight(.semibold))
+            if canVote(story.author) {
+                Button {
+                    upvote(story.id)
+                } label: {
+                    Label(voteStore.hasVoted(story.id) ? "Upvoted" : "Upvote",
+                          systemImage: voteStore.hasVoted(story.id) ? "arrow.up.circle.fill" : "arrow.up.circle")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .buttonStyle(.bordered)
+                .tint(Theme.upvote)
+                .disabled(voteStore.hasVoted(story.id))
             }
-            .buttonStyle(.bordered)
-            .tint(Theme.upvote)
-            .disabled(voteStore.hasVoted(story.id))
 
             Button {
                 compose(parentID: story.id, title: "Add Comment", context: story.displayTitle)
@@ -399,6 +406,7 @@ struct StoryDetailView: View {
                             opAuthor: story.author,
                             isCollapsed: vm.isCollapsed(comment.id),
                             canInteract: canInteract,
+                            canVote: canVote(comment.author),
                             isVoted: voteStore.hasVoted(comment.id),
                             canEdit: canEdit(comment),
                             onReply: { compose(parentID: comment.id, title: "Reply", context: "Replying to \(comment.author)") },

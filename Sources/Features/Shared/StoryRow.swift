@@ -6,15 +6,23 @@ import SwiftUI
 struct StoryRow: View {
     let item: HNItem
     var rank: Int?
+    /// When provided, the username becomes a tappable shortcut to the author's
+    /// profile. Passed by containers that own a navigation path; when nil the
+    /// username is plain text so the row's own tap (the story) stays intact.
+    var onSelectUser: ((String) -> Void)?
 
     @Environment(SettingsStore.self) private var settings
     @Environment(BookmarkStore.self) private var bookmarks
     @Environment(ReadStore.self) private var readStore
     @Environment(AccountStore.self) private var account
     @Environment(FavoritesStore.self) private var favorites
+    @Environment(VoteStore.self) private var voteStore
     @Environment(\.openArticle) private var openArticle
     @Environment(\.accessibilityDifferentiateWithoutColor) private var systemDiffNoColor
     @Environment(\.dynamicTypeSize) private var typeSize
+
+    /// Web fallback shown when a native upvote is rejected (expired session, etc.).
+    @State private var webTask: HNWebTask?
 
     private var isRead: Bool { readStore.isRead(item.id) }
     /// When signed in, the save action manages HN favorites; otherwise local bookmarks.
@@ -32,6 +40,33 @@ struct StoryRow: View {
         }
     }
 
+    /// Whether the signed-in user can upvote this item directly from the row.
+    /// HN shows no vote arrow on your own posts, so hide the affordance there
+    /// rather than letting the tap fail into the web fallback.
+    private var canVote: Bool {
+        settings.accountFeaturesEnabled && account.isSignedIn
+            && item.kind != .job && item.author != account.username
+    }
+    private var hasVoted: Bool { voteStore.hasVoted(item.id) }
+    /// Points bumped by our own optimistic upvote (HN's API count lags).
+    private var displayedPoints: Int { item.points + (hasVoted ? 1 : 0) }
+
+    /// Optimistic native upvote; on any failure, revert and offer the web fallback.
+    private func upvote() {
+        guard canVote, !hasVoted else { return }
+        voteStore.markVoted(item.id)
+        Haptics.soft()
+        Task {
+            do {
+                try await HNWebWriter(dataStore: account.dataStore).vote(itemID: item.id, up: true)
+            } catch {
+                voteStore.unmarkVoted(item.id)
+                Haptics.warning()
+                webTask = .item(itemID: item.id)
+            }
+        }
+    }
+
     private var categoryTag: (String, Color)? {
         switch item.kind {
         case .job: return ("Job", Theme.upvote)
@@ -46,12 +81,16 @@ struct StoryRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.m) {
             if settings.showRankNumbers, let rank {
+                // When the URL sits above the title, shrink the rank to the URL's
+                // size and top-align the two so they share the first line.
                 Text("\(rank)")
-                    .font(.system(.footnote, design: .rounded).weight(.bold))
+                    .font(settings.urlAboveTitle
+                          ? AppFont.meta
+                          : .system(.footnote, design: .rounded).weight(.bold))
                     .monospacedDigit()
                     .foregroundStyle(Theme.textTertiary)
                     .frame(width: 22, alignment: .trailing)
-                    .padding(.top, 2)
+                    .padding(.top, settings.urlAboveTitle ? 0 : 2)
             }
 
             if settings.showThumbnails {
@@ -59,17 +98,18 @@ struct StoryRow: View {
             }
 
             VStack(alignment: .leading, spacing: 5) {
+                if settings.urlAboveTitle, let host = item.host {
+                    hostLabel(host)
+                }
+
                 Text(item.displayTitle)
                     .font(AppFont.storyTitle)
                     .foregroundStyle(isRead ? Theme.textSecondary : Theme.textPrimary)
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
 
-                if let host = item.host {
-                    Text(host)
-                        .font(AppFont.meta)
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
+                if !settings.urlAboveTitle, let host = item.host {
+                    hostLabel(host)
                 }
 
                 metaRow
@@ -94,6 +134,9 @@ struct StoryRow: View {
         .accessibilityAddTraits(.isButton)
         .accessibilityActions { rowActions }
         .contextMenu { contextMenu } preview: { StoryPreview(item: item) }
+        .sheet(item: $webTask) { task in
+            HNWebSheet(task: task)
+        }
     }
 
     // MARK: Pieces
@@ -126,22 +169,64 @@ struct StoryRow: View {
         .padding(.top, 1)
     }
 
+    /// Host as a tappable shortcut to the article when one exists.
+    @ViewBuilder private func hostLabel(_ host: String) -> some View {
+        let label = Text(host)
+            .font(AppFont.meta)
+            .foregroundStyle(Theme.textSecondary)
+            .lineLimit(1)
+        if let url = item.articleURL {
+            Button {
+                Haptics.tap()
+                openArticle(url)
+            } label: { label }
+            .buttonStyle(.plain)
+            .accessibilityHidden(true)
+        } else {
+            label
+        }
+    }
+
     private var metaRow: some View {
         HStack(spacing: Spacing.m) {
             if item.kind != .job {
-                StatLabel(systemImage: "arrow.up", value: "\(item.points)", tint: Theme.upvote)
+                upvoteStat
                 StatLabel(systemImage: "bubble.left", value: "\(item.commentCount)")
             }
             if let tag = categoryTag, item.host != nil {
                 TagBadge(text: tag.0, color: tag.1)
             }
-            HStack(spacing: 4) {
+            // Author and time-since are spaced like the other meta items (no
+            // separator bullet) so the whole row reads consistently.
+            // A plain Button (not a NavigationLink) keeps the username tappable
+            // without the List promoting it to the row's tap action — the rest of
+            // the row still opens the story.
+            if let onSelectUser {
+                Button { onSelectUser(item.author) } label: {
+                    Text(item.author).lineLimit(1)
+                }
+                .buttonStyle(.plain)
+            } else {
                 Text(item.author).lineLimit(1)
-                Text("·")
-                Text(RelativeTime.compact(item.date))
             }
-            .font(AppFont.meta)
-            .foregroundStyle(Theme.textSecondary)
+            Text(RelativeTime.compact(item.date))
+        }
+        .font(AppFont.meta)
+        .foregroundStyle(Theme.textSecondary)
+    }
+
+    /// Points stat that doubles as a one-tap upvote when signed in.
+    @ViewBuilder private var upvoteStat: some View {
+        if canVote {
+            Button { upvote() } label: {
+                StatLabel(systemImage: hasVoted ? "arrow.up.circle.fill" : "arrow.up",
+                          value: "\(displayedPoints)", tint: Theme.upvote)
+            }
+            .buttonStyle(.plain)
+            .disabled(hasVoted)
+            .accessibilityHidden(true)
+        } else {
+            StatLabel(systemImage: "arrow.up", value: "\(displayedPoints)", tint: Theme.upvote)
         }
     }
 
@@ -150,6 +235,9 @@ struct StoryRow: View {
     @ViewBuilder private var rowActions: some View {
         if let url = item.articleURL {
             Button("Open Link") { openArticle(url) }
+        }
+        if canVote, !hasVoted {
+            Button("Upvote") { upvote() }
         }
         Button(saveActionTitle) {
             toggleSaved()
